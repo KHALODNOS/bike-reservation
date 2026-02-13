@@ -3,11 +3,13 @@ const cors = require("cors");
 const connectFn = require("./config/connect");
 require("dotenv").config();
 const userRoutes = require("./routes/UserRoutes");
+const BikeRoutes = require("./routes/VeloRoutes");
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 app.use("/api/", userRoutes);
+app.use("/api/", BikeRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ error: "Route non trouvé" });

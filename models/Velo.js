@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const VeloSchema = new mongoose.schema({
+const VeloSchema = new mongoose.Schema({
   id: {
     type: Number,
     required: true,
