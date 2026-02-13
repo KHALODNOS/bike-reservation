@@ -44,19 +44,25 @@ exports.updateBike = async (req, res) => {
     const { id } = req.params;
 
     if (!isValidObjectId(id)) {
-      return res.status(400).json({ error: "id not found / invalide !" });
+      return res.status(400).json({ error: "Invalid ID!" });
     }
 
-    const bike = Velo.findByIdAndUpdate(id, req.body, {
+    const bike = await Velo.findByIdAndUpdate(id, req.body, {
       new: true,
       runValidators: true,
     });
 
     if (!bike) {
-      return res.status(400).json({ error: "bike not found!" });
+      return res.status(404).json({ error: "Bike not found!" });
     }
+
+    res.status(200).json({
+      success: true,
+      message: "Bike updated successfully",
+      bike,
+    });
   } catch (error) {
-    return sendError(res, error.message, 400);
+    return sendError(res, error.message, 500);
   }
 };
 

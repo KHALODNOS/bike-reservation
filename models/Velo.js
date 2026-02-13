@@ -30,6 +30,6 @@ const VeloSchema = new mongoose.Schema({
   },
 });
 
-//image->cdn d ghayna kolo
+
 
 module.exports = mongoose.model("Velo", VeloSchema);
