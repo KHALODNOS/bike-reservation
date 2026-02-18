@@ -27,11 +27,12 @@ import AddBikeModal from './AddBikeModal';
 
 interface AdminDashboardProps {
     onLogout: () => void;
+    onUpdate?: () => void;
 }
 
 type Tab = 'Overview' | 'Inventory' | 'Reservations' | 'Users' | 'Settings';
 
-const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
+const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onUpdate }) => {
     const [activeTab, setActiveTab] = useState<Tab>('Overview');
     const [bikes, setBikes] = useState<Bike[]>([]);
     const [bookings, setBookings] = useState<any[]>([]);
@@ -101,6 +102,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
 
     const handleUpdateStatus = async (id: string, status: string) => {
         try {
+            // Optimistic update for booking status and bike availability
+            setBookings(prev => prev.map(b => b._id === id ? { ...b, status } : b));
+
+            if (status === 'confirmed') {
+                const booking = bookings.find(b => b._id === id);
+                if (booking && booking.bike) {
+                    setBikes(prev => prev.map(b => (b._id === booking.bike._id || b.id === booking.bike.id) ? { ...b, available: false } : b));
+                }
+            } else if (status === 'cancelled') {
+                const booking = bookings.find(b => b._id === id);
+                if (booking && booking.bike) {
+                    setBikes(prev => prev.map(b => (b._id === booking.bike._id || b.id === booking.bike.id) ? { ...b, available: true } : b));
+                }
+            }
+
             const token = localStorage.getItem('token');
             const res = await fetch(`http://localhost:4000/api/booking/${id}/status`, {
                 method: 'PUT',
@@ -113,9 +129,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
             if (res.ok) {
                 fetchBookings();
                 fetchBikes();
+                onUpdate?.();
             }
         } catch (err) {
             console.error(err);
+            // Revert state if needed (refetching will handle this eventually)
+            fetchBookings();
+            fetchBikes();
         }
     };
 
@@ -131,6 +151,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
             });
             if (res.ok) {
                 fetchUsers();
+                onUpdate?.();
             } else {
                 const data = await res.json();
                 alert(data.error || "Une erreur est survenue");
@@ -144,13 +165,24 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
         fetchBikes();
         fetchBookings();
         fetchUsers();
+
+        // Background polling to show new reservations without reload
+        const interval = setInterval(() => {
+            fetchBookings();
+            fetchBikes();
+        }, 5000); // Check for new bookings every 5 seconds
+
+        return () => clearInterval(interval);
     }, []);
 
     const handleDelete = async (id: string) => {
         if (!window.confirm('Etes-vous sûr de vouloir supprimer ce vélo?')) return;
         try {
             const res = await fetch(`http://localhost:4000/api/deleteBike/${id}`, { method: 'DELETE' });
-            if (res.ok) fetchBikes();
+            if (res.ok) {
+                fetchBikes();
+                onUpdate?.();
+            }
         } catch (err) {
             console.error(err);
         }
@@ -514,7 +546,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                                                 </div>
                                             </td>
                                             <td className="px-8 py-6 font-bold text-gray-700">
-                                                {booking.bike?.nom || 'Deleted Bike'}
+                                                <div className="flex flex-col">
+                                                    <span>{booking.bike?.nom || 'Deleted Bike'}</span>
+                                                    {booking.status === 'pending' && bikes.find(b => b._id === booking.bike?._id)?.available === false && (
+                                                        <span className="text-[9px] text-red-500 font-black uppercase tracking-tighter mt-1 animate-pulse">
+                                                            ⚠️ Bike Taken by another confirm
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="px-8 py-6">
                                                 <div className="text-xs font-bold text-gray-500 space-y-1">

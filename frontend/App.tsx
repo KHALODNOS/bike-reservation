@@ -227,7 +227,7 @@ const App: React.FC = () => {
       case 'reservations':
         return <Bookings onCancelSuccess={fetchBikes} />;
       case 'admin':
-        return <AdminDashboard onLogout={handleLogout} />;
+        return <AdminDashboard onLogout={handleLogout} onUpdate={fetchBikes} />;
       default:
         return <Home
           loading={loading}
