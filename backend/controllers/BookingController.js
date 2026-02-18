@@ -22,10 +22,6 @@ exports.createBookings = async (req, res) => {
       endDate,
     });
 
-    bike.available = false;
-
-    await bike.save();
-
     res.status(201).json({ success: true, booking });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -59,6 +55,50 @@ exports.cancelBooking = async (req, res) => {
     await Velo.findByIdAndUpdate(booking.bike, { available: true });
 
     res.json({ success: true, message: "Booking cancelled" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Admin: Get all bookings
+exports.getAllBookings = async (req, res) => {
+  try {
+    const bookings = await Booking.find()
+      .populate("user", "nom email")
+      .populate("bike")
+      .sort({ createdAt: -1 });
+    res.json(bookings);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Admin: Update booking status
+exports.updateBookingStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!["pending", "confirmed", "cancelled"].includes(status)) {
+      return res.status(400).json({ error: "Invalid status" });
+    }
+
+    const booking = await Booking.findById(id);
+    if (!booking) return res.status(404).json({ error: "Booking not found" });
+
+    booking.status = status;
+    await booking.save();
+
+    // If cancelled, make the bike available again
+    if (status === "cancelled") {
+      await Velo.findByIdAndUpdate(booking.bike, { available: true });
+    }
+    // If confirmed, make sure bike is marked unavailable
+    else if (status === "confirmed") {
+      await Velo.findByIdAndUpdate(booking.bike, { available: false });
+    }
+
+    res.json({ success: true, booking });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

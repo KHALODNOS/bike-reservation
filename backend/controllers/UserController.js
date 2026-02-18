@@ -5,9 +5,9 @@ const jwt = require("jsonwebtoken");
 const inscription = async (req, res) => {
   try {
     console.log(req.body);
-    const { nom, email, password, role } = req.body;
-    if (!nom || !email || !password) {
-      return res.status(400).json({ error: "Nom, email et password requis" });
+    const { nom, email, password, role, age, gender } = req.body;
+    if (!nom || !email || !password || !age || !gender) {
+      return res.status(400).json({ error: "Tous les champs sont requis" });
     }
 
     const existingUser = await User.findOne({ email });
@@ -22,6 +22,8 @@ const inscription = async (req, res) => {
       email,
       password: hashPassword,
       role: role || "user",
+      age,
+      gender,
     });
 
     const token = jwt.sign(
@@ -34,7 +36,7 @@ const inscription = async (req, res) => {
       { expiresIn: "24h" },
     );
 
-    res.status(201).json({ succes: true, token });
+    res.status(201).json({ success: true, token });
   } catch (error) {
     console.error("Register error:", error);
     res.status(500).json({ error: error.message });
@@ -48,13 +50,13 @@ const Login = async (req, res) => {
     const user = await User.findOne({ email });
 
     if (!user) {
-      return res.status(401).json({ error: "Email out mode passe incrorecct" });
+      return res.status(401).json({ error: "Email ou mot de passe incorrect" });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
-      return res.status(401).json({ error: "Email out mode passe incrorecct" });
+      return res.status(401).json({ error: "Email ou mot de passe incorrect" });
     }
 
     const token = jwt.sign(
@@ -136,6 +138,32 @@ const removeFavorite = async (req, res) => {
   }
 };
 
+const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find().select("-password").sort({ createdAt: -1 });
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    if (user.role === "admin") {
+      return res.status(403).json({ error: "Action interdite: suppression d'un administrateur" });
+    }
+
+    await User.findByIdAndDelete(id);
+    res.json({ success: true, message: "Utilisateur supprimé" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   inscription,
   Login,
@@ -143,4 +171,6 @@ module.exports = {
   getFavorites,
   addFavorite,
   removeFavorite,
+  getAllUsers,
+  deleteUser,
 };

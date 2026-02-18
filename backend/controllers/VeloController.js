@@ -85,12 +85,12 @@ exports.deleteBike = async (req, res) => {
     if (!isValidObjectId(id)) {
       return res.status(400).json({ error: "id not found / invalide !" });
     }
-    const bike = Velo.findByIdAndDelete(id);
+    const bike = await Velo.findByIdAndDelete(id);
 
-    if (!livre) {
-      return res.status(404).json({ error: error.message });
+    if (!bike) {
+      return res.status(404).json({ error: "Bike not found" });
     }
-    return res.status(200).json({ error: "Deleted!" });
+    return res.status(200).json({ success: true, message: "Deleted!" });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

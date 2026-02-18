@@ -5,6 +5,8 @@ const {
   addFavorite,
   removeFavorite,
   getFavorites,
+  getAllUsers,
+  deleteUser,
 } = require("../controllers/UserController");
 
 const { authenticateToken, authorizeRole } = require("../middleware/auth");
@@ -20,5 +22,9 @@ router.route("/auth/login").post(Login);
 router.route("/favorite/add").post(authenticateToken, addFavorite);
 router.route("/favorite/remove").post(authenticateToken, removeFavorite);
 router.route("/favorite/all").get(authenticateToken, getFavorites);
+
+// Admin: User management
+router.route("/users").get(authenticateToken, authorizeRole("admin"), getAllUsers);
+router.route("/users/:id").delete(authenticateToken, authorizeRole("admin"), deleteUser);
 
 module.exports = router;
